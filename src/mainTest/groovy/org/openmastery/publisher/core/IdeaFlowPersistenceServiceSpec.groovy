@@ -13,6 +13,7 @@ import org.openmastery.publisher.core.task.TaskEntity
 import org.openmastery.publisher.ideaflow.IdeaFlowPartialStateEntity
 import org.openmastery.time.MockTimeService
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.PageRequest
 import spock.lang.Ignore
 import spock.lang.Specification
 
@@ -56,7 +57,7 @@ abstract class IdeaFlowPersistenceServiceSpec extends Specification {
 
 	def "findRecentTasks should return empty list if no tasks"() {
 		expect:
-		assert persistenceService.findRecentTasks(-1L, 1).isEmpty()
+		assert persistenceService.findRecentTasks(-1L, new PageRequest(0, 10)).content.isEmpty()
 	}
 
 	def "findRecentTasks should return entire list if number of tasks less than limit"() {
@@ -64,7 +65,7 @@ abstract class IdeaFlowPersistenceServiceSpec extends Specification {
 		TaskEntity task = saveTask(aRandom.taskEntity())
 
 		when:
-		List<TaskEntity> taskList = persistenceService.findRecentTasks(task.ownerId, 5)
+		List<TaskEntity> taskList = persistenceService.findRecentTasks(task.ownerId, new PageRequest(0, 5)).content
 
 		then:
 		assert taskList == [task]
@@ -83,10 +84,28 @@ abstract class IdeaFlowPersistenceServiceSpec extends Specification {
 				                                       .modifyDate(mockTimeService.javaInFuture(23)))
 
 		when:
-		List<TaskEntity> taskList = persistenceService.findRecentTasks(mostRecent.ownerId, 2)
+		List<TaskEntity> taskList = persistenceService.findRecentTasks(mostRecent.ownerId, new PageRequest(0, 2)).content
 
 		then:
 		assert taskList == [mostRecent, secondMostRecent]
+	}
+
+	@Ignore // TODO: Not working yet
+	def "findRecentTasks return page 2 of tasks"() {
+		given:
+		List<TaskEntity> tasks = []
+		for (int i = 0; i < 10; i++) {
+			tasks.add(saveTask(aRandom.taskEntity()
+					.ownerId(task.ownerId)
+					.modifyDate(mockTimeService.javaInFuture(i))))
+		}
+		tasks = tasks.reverse()
+
+		when:
+		List<TaskEntity> taskList = persistenceService.findRecentTasks(task.ownerId, new PageRequest(1, 5)).content
+
+		then:
+		assert taskList == tasks.subList(5, 10)
 	}
 
 	def "saveTask should fail if task with existing name and owner_id is created"() {

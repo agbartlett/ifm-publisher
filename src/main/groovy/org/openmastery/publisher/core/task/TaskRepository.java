@@ -15,7 +15,8 @@
  */
 package org.openmastery.publisher.core.task;
 
-import org.openmastery.publisher.core.activity.ExecutionActivityEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.Param;
@@ -27,8 +28,9 @@ public interface TaskRepository extends PagingAndSortingRepository<TaskEntity, L
 
 	TaskEntity findByOwnerIdAndName(Long ownerId, String name);
 
-	@Query(nativeQuery = true, value = "select * from task where owner_id=:ownerId order by modify_date desc limit :limit")
-	List<TaskEntity> findRecent(@Param("ownerId") Long userId, @Param("limit") int limit);
+	@Query(nativeQuery = true, value = "select * from task where owner_id=:ownerId order by modify_date desc, ?#{#pageable}",
+			countQuery = "select count(*) from task where owner_id=:ownerId")
+	Page<TaskEntity> findRecent(@Param("ownerId") Long userId, Pageable pageable);
 
 
 	@Query(nativeQuery = true, value = "select * from task where owner_id=(?1) " +
